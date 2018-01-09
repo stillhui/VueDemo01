@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,user-scalable=no">
+    <title>v</title>
+    <link rel="shortcut icon" type="image/ico" href="./favicon.ico" />
+  </head>
+  <body>
+    <div id="watch-example">
+      <p>请提出你的问题，我将如实回答：</p>
+      <p><input v-model="question" :disabled="tf"> <button v-if="seen" @click="clk()">刷新</button></p>
+      <p>{{ answer }}</p>
+      <p><img style="display: block;width: 100%;height: auto;" :src="src"></p>
+    </div>
+    <!-- 因为 AJAX 库和通用工具的生态已经相当丰富，Vue 核心代码没有重复 -->
+    <!-- 提供这些功能以保持精简。这也可以让你自由选择自己更熟悉的工具。 -->
+    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@0.12.0/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.13.1/lodash.min.js"></script>
+    <script>
+    var watchExampleVM = new Vue({
+      el: '#watch-example',
+      data: {
+        question: '',
+        answer: '',
+        src:"",
+        tf:false,
+        seen:false
+      },
+      watch: {
+        // 如果 `question` 发生改变，这个函数就会运行
+        question: function (newQuestion) {
+          this.answer = '能不能快点输入...'
+          this.getAnswer()
+        }
+      },
+      methods: {
+        // `_.debounce` 是一个通过 Lodash 限制操作频率的函数。
+        // 在这个例子中，我们希望限制访问 yesno.wtf/api 的频率
+        // AJAX 请求直到用户输入完毕才会发出。想要了解更多关于
+        // `_.debounce` 函数 (及其近亲 `_.throttle`) 的知识，
+        // 请参考：https://lodash.com/docs#debounce
+        getAnswer: _.debounce(
+          function () {
+            if ((this.question.indexOf('?') === -1)&&(this.question.indexOf('？') === -1)) {
+              this.answer = '没个问号(?)你问啥...'
+              return
+            }
+            this.answer = '我在真诚的思考...'
+            var vm = this
+            axios.get('https://yesno.wtf/api')
+              .then(function (response) {
+                vm.answer = (_.capitalize(response.data.answer)=="Yes")?"是的呢":"不是哦";
+                vm.src = _.capitalize(response.data.image);
+                vm.tf = true;
+                vm.seen = true;
+              })
+              .catch(function (error) {
+                vm.answer = '我迷路了...' + error
+              })
+          },
+          // 这是我们为判定用户停止输入等待的毫秒数
+          800
+        ),
+        clk:function(){
+          window.location.reload();
+        }
+      }
+    })
+    </script>
+  </body>
+</html>
